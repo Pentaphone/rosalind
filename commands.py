@@ -10,3 +10,7 @@ reverse_complement = ["reverse complement", "reverse comp", "rev complement", "r
 transcribe = ["transcribe", "trc"]
 translate = ["translate", "trl"]
 
+# --- Other ---
+undo = ["undo"]
+redo = ["redo"]
+help = ["help", "?"]
