@@ -1,5 +1,6 @@
 # --- Sequence ---
 new = ["new"]
+random = ["random", "rand"]     # "rand" is useless, because its a protein sequence
 print_seq = ["sequence", "seq", "print seq", "print sequence"]
 length = ["length", "len"]
 count = ["count"]

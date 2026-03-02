@@ -4,10 +4,12 @@
 
 from codon_table import codon_table
 import commands as cmds
+
+import random
 import re
 
 seq: str
-seq_type: str
+seq_type: str = None
 is_forward: bool = None
 seq_length: int
 
@@ -16,27 +18,35 @@ undone_history = []     # [ (seq, seq_type, is_forward) ]
 
 
 # --- Utility ---
-def nucleotides():
+def nucleotides(seq_type: str = None) -> str:
+    if seq_type == None: seq_type = globals()['seq_type']
+
     if seq_type == "DNA": return "ATGC"
     elif seq_type == "RNA": return "AUGC"
     else: return None
 
 AMINO_ACIDS = "ACDEFGHIKLMNPQRSTVWY"
 
+def random_seq(seq_type: str, length: int = 100) -> str:
+    if seq_type == "DNA": return ''.join(random.choices(nucleotides("DNA"), k=length))
+    elif seq_type == "RNA": return ''.join(random.choices(nucleotides("RNA"), k=length))
+    elif seq_type == "Protein": return ''.join(random.choices(AMINO_ACIDS, k=length))
+    else: return None
+
 
 # --- Sequence Type Detection ---
 def is_dna(seq: str) -> bool:
-    if re.fullmatch(r"^((3|5)'?\-)?(A|T|G|C)+(\-(5|3)'?)?$", seq):
+    if re.fullmatch(r"^((3|5)'?\-)?(A|T|G|C)+(\-(5|3)'?)?$", seq, re.IGNORECASE):
         return True
     else: return False
 
 def is_rna(seq: str) -> bool:
-    if re.fullmatch(r"^((3|5)'?\-)?(A|U|G|C)+(\-(5|3)'?)?$", seq):
+    if re.fullmatch(r"^((3|5)'?\-)?(A|U|G|C)+(\-(5|3)'?)?$", seq, re.IGNORECASE):
         return True
     else: return False
 
 def is_protein(seq: str) -> bool:
-    if re.fullmatch(r"^((N|C)'?\-)?([ACDEFGHIKLMNPQRSTVWY])+(\-(N|C)'?)?$", seq):
+    if re.fullmatch(r"^((N|C)'?\-)?([ACDEFGHIKLMNPQRSTVWY])+(\-(N|C)'?)?$", seq, re.IGNORECASE):
         return True
     else: return False
 
@@ -45,45 +55,102 @@ def is_protein(seq: str) -> bool:
 def new_seq() -> None:
     global seq, seq_type, is_forward, seq_length
 
-    input_str = input("Enter sequence:\n").upper()
+    input_str = input("Enter sequence:\n").lower()
+    input_split = input_str.split()
 
     if is_dna(input_str):
         seq_type = "DNA"
         if input_str.startswith("5"): is_forward = True
         elif input_str.startswith("3"): is_forward = False
-        try: seq_history.append((seq, seq_type, is_forward))
-        except NameError: pass
+        if 'seq' in globals():  seq_history.append((seq, seq_type, is_forward))
         seq = input_str.strip("35'-").upper()
+        seq_length = len(seq)
+        print("DNA sequence detected. " \
+            +f"Orientation: {'forward' if is_forward == True else 'reverse' if is_forward == False else 'unknown'}, " \
+            +f"Length: {seq_length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}" )
         
     elif is_rna(input_str):
         seq_type = "RNA"
         if input_str.startswith("5"): is_forward = True
         elif input_str.startswith("3"): is_forward = False
-        try: seq_history.append((seq, seq_type, is_forward))
-        except NameError: pass
+        if 'seq' in globals():  seq_history.append((seq, seq_type, is_forward))
         seq = input_str.strip("35'-").upper()
+        seq_length = len(seq)
+        print("RNA sequence detected. " \
+            +f"Orientation: {'forward' if is_forward == True else 'reverse' if is_forward == False else 'unknown'}, " \
+            +f"Length: {seq_length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}" )
         
     elif is_protein(input_str):
         seq_type = "Protein"
         if input_str.startswith(("N'-", "N-")): is_forward = True
         elif input_str.startswith(("C'-", "C-")): is_forward = False
-        try: seq_history.append((seq, seq_type, is_forward))
-        except NameError: pass
+        if 'seq' in globals():  seq_history.append((seq, seq_type, is_forward))
         seq = input_str.strip("NC'-").upper()
+        seq_length = len(seq)
+        print("Protein sequence detected. " \
+            +f"Orientation: {'forward' if is_forward == True else 'reverse' if is_forward == False else 'unknown'}, " \
+            +f"Length: {seq_length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}" )
 
+    # random sequence
+    elif input_split[0] in cmds.random:
+
+        if len(input_split) == 3 \
+            and input_split[1] in ["rna", "dna", "protein"] \
+            and input_split[2].isdigit():
+                if 'seq' in globals(): seq_history.append((seq, seq_type, is_forward))
+                seq_type = input_split[1].replace("dna", "DNA").replace("rna", "RNA").replace("protein", "Protein")
+                seq_length = int(input_split[2])
+                seq = random_seq(seq_type, seq_length)
+                is_forward = True
+                print(f"Random {seq_type} sequence generated:")
+                print_seq(blank_line=False)
+
+        elif len(input_split) == 2 \
+            and input_split[1] in ["rna", "dna", "protein"]:
+                if 'seq' in globals(): seq_history.append((seq, seq_type, is_forward))
+                seq_type = input_split[1].replace("dna", "DNA").replace("rna", "RNA").replace("protein", "Protein")
+                seq = random_seq(seq_type)
+                is_forward = True
+                seq_length = len(seq)
+                print_seq(blank_line=False)
+                print(f"Length: {seq_length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}")
+
+        elif len(input_split) == 1:
+            input_str = input("Sequence Type (DNA / RNA / Protein):\n>>  ").lower()
+            if input_str not in ["rna", "dna", "protein"]:
+                print("Invalid sequence type.")
+                new_seq()
+                return
+            else:
+                seq_type = input_str.replace("dna", "DNA").replace("rna", "RNA").replace("protein", "Protein")
+                input_str = input("Sequence length (default = 100):\n>>  ")
+                if not input_str.isdigit() and input_str != "":
+                    print("Invalid sequence length.")
+                    new_seq()
+                    return
+                elif input_str == "":
+                    seq_length = 100
+                else:
+                    seq_length = int(input_str)
+                seq = random_seq(seq_type, seq_length)
+                is_forward = True
+                print_seq(blank_line=False)
+                print(f"Length: {seq_length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}")
+
+        else:
+            print("Invalid random sequence command.")
+            new_seq()
+            return
+        
     else:
         print("Invalid sequence. Please enter a valid DNA, RNA or protein sequence.")
         new_seq()
         return
     
-    seq_length = len(seq)
-    print(f"{seq_type} sequence detected. " \
-        + f"Orientation: {'forward' if is_forward == True else 'reverse' if is_forward == False else 'unknown'}. " \
-        + f"Length: {seq_length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}." )
     print()
     
 
-def print_seq():
+def print_seq(blank_line: bool = True):
     global seq, seq_type, is_forward
     if seq_type in ['DNA', 'RNA']:
         if is_forward == True: print(f"5'-{seq}-3'")
@@ -93,7 +160,7 @@ def print_seq():
         if is_forward == True: print(f"N'-{seq}-C'")
         elif is_forward == False: print(f"C'-{seq}-N'")
         else: print(seq)
-    print()
+    if blank_line: print()
 
 
 def count() -> None:
@@ -126,41 +193,47 @@ def reverse() -> None:
     is_forward = not is_forward if is_forward != None else None
 
 
-def complement() -> None:
+def complement() -> bool:
     global seq, seq_type, is_forward
     if seq_type == "DNA":
         complement_transl_table = str.maketrans("ATGC", "TACG")
+        return True
     elif seq_type == "RNA":
         complement_transl_table = str.maketrans("AUGC", "UACG")
+        return True
     else:
         print("Complement is only applicable to DNA and RNA sequences.")
         print()
-        return None
+        return False
     
     seq_history.append((seq, seq_type, is_forward))
     seq = seq.translate(complement_transl_table)
     is_forward = not is_forward if is_forward != None else None
 
 
-def transcribe() -> None:
+def transcribe() -> bool:
     global seq, seq_type, is_forward
 
     if seq_type == "DNA":
         seq_history.append((seq, seq_type, is_forward))
         seq = seq.replace("T", "U")
         seq_type = "RNA"
+        return True
 
     elif seq_type == "RNA":
         seq_history.append((seq, seq_type, is_forward))
         seq = seq.replace("U", "T")
         seq_type = "DNA"
+        return True
 
     else:
         print("Transcription is only applicable to DNA and RNA sequences.")
         print()
+        return False
 
 
-def translate() -> None:
+
+def translate() -> bool:
     global seq, seq_type, is_forward, seq_length
 
     if seq_type == "DNA":
@@ -172,6 +245,7 @@ def translate() -> None:
         seq_history.append((seq, seq_type, is_forward))
         seq = translation
         seq_type = "Protein"; seq_length = len(seq)
+        return True
 
     elif seq_type == "RNA":
         transcribe()
@@ -179,6 +253,7 @@ def translate() -> None:
     else:
         print("Translation is only applicable to DNA and RNA sequences.")
         print()
+        return False
 
 
 # --- Other ---
@@ -225,20 +300,20 @@ while True:
         print_seq()
 
     elif input_str in cmds.complement:
-        complement()
-        print("Complement sequence generated:")
-        print_seq()
+        if complement():
+            print("Complement sequence generated:")
+            print_seq()
 
     elif input_str in cmds.reverse_complement:
         reverse()
-        complement()
-        print("Reverse complement sequence generated:")
-        print_seq()
+        if complement():
+            print("Reverse complement sequence generated:")
+            print_seq()
 
     elif input_str in cmds.transcribe:
-        transcribe()
-        print(f"Sequence transcribed into {seq_type}:")
-        print_seq()
+        if transcribe():
+            print(f"Sequence transcribed into {seq_type}:")
+            print_seq()
 
     elif input_str in cmds.rna:
         if seq_type == "DNA":
@@ -259,9 +334,9 @@ while True:
         else: transcribe()  # protein, prints error message
 
     elif input_str in cmds.translate:
-        translate()
-        print("Sequence translated:")
-        print_seq()
+        if translate():
+            print("Sequence translated:")
+            print_seq()
 
     # --- Other ---
     elif input_str in cmds.undo:
