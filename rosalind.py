@@ -3,7 +3,7 @@
 
 
 from codon_table import codon_table
-import commands as coms
+import commands as cmds
 import re
 
 seq: str
@@ -13,6 +13,15 @@ seq_length: int
 
 seq_history = []        # [ (seq, seq_type, is_forward) ]
 undone_history = []     # [ (seq, seq_type, is_forward) ]
+
+
+# --- Utility ---
+def nucleotides():
+    if seq_type == "DNA": return "ATGC"
+    elif seq_type == "RNA": return "AUGC"
+    else: return None
+
+AMINO_ACIDS = "ACDEFGHIKLMNPQRSTVWY"
 
 
 # --- Sequence Type Detection ---
@@ -34,7 +43,7 @@ def is_protein(seq: str) -> bool:
 
 # --- Sequence ---
 def new_seq() -> None:
-    global seq, seq_type, is_forward
+    global seq, seq_type, is_forward, seq_length
 
     input_str = input("Enter sequence:\n").upper()
 
@@ -67,10 +76,10 @@ def new_seq() -> None:
         new_seq()
         return
     
-    length = len(seq)
+    seq_length = len(seq)
     print(f"{seq_type} sequence detected. " \
         + f"Orientation: {'forward' if is_forward == True else 'reverse' if is_forward == False else 'unknown'}. " \
-        + f"Length: {length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}." )
+        + f"Length: {seq_length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}." )
     print()
     
 
@@ -87,12 +96,35 @@ def print_seq():
     print()
 
 
+def count() -> None:
+    global seq, seq_type, seq_length
+
+    if seq_type in ['DNA', 'RNA']:
+        counts = {nt: seq.count(nt) for nt in nucleotides() if nt in seq}
+        portions = {nt: counts[nt] / seq_length for nt in counts}
+        print("Nucleotide counts:")
+        for nt, count in counts.items():
+            print(f"{nt}: {count:>4}  {portions[nt]:.1%}")
+
+    elif seq_type == "Protein":
+        counts = {aa: seq.count(aa) for aa in AMINO_ACIDS if aa in seq}
+        portions = {aa: counts[aa] / seq_length for aa in counts}
+        print("Amino acid counts:")
+        for aa, count in counts.items():
+            print(f"{aa}: {count:>4}  {portions[aa]:.1%}")
+
+    else:
+        print("No sequence to count.")
+    print()
+
+
 # --- Sequence Editing ---
 def reverse() -> None:
     global seq, seq_type, is_forward
     seq_history.append((seq, seq_type, is_forward))
     seq = seq[::-1]
     is_forward = not is_forward if is_forward != None else None
+
 
 def complement() -> None:
     global seq, seq_type, is_forward
@@ -108,6 +140,7 @@ def complement() -> None:
     seq_history.append((seq, seq_type, is_forward))
     seq = seq.translate(complement_transl_table)
     is_forward = not is_forward if is_forward != None else None
+
 
 def transcribe() -> None:
     global seq, seq_type, is_forward
@@ -125,6 +158,7 @@ def transcribe() -> None:
     else:
         print("Transcription is only applicable to DNA and RNA sequences.")
         print()
+
 
 def translate() -> None:
     global seq, seq_type, is_forward, seq_length
@@ -157,6 +191,7 @@ def undo() -> bool:
         return True
     else: return False
 
+
 def redo() -> bool:
     global seq, seq_type, is_forward, seq_length
     if len(undone_history) > 0:
@@ -178,46 +213,71 @@ while True:
     input_str = input(">>  ").lower()
 
     # --- Sequence ---
-    if input_str in coms.print_seq: print_seq()
-    elif input_str in coms.new: new_seq()
-    elif input_str in coms.length: print(f"{seq_length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}.")
+    if input_str in cmds.print_seq: print_seq()
+    elif input_str in cmds.new: new_seq()
+    elif input_str in cmds.length: print(f"{seq_length} {'nt' if seq_type in ['DNA', 'RNA'] else 'aa'}.")
+    elif input_str in cmds.count: count()
 
     # --- Sequence Editing ---
-    elif input_str in coms.reverse:
+    elif input_str in cmds.reverse:
         reverse()
         print("Sequence reversed:")
         print_seq()
-    elif input_str in coms.complement:
+
+    elif input_str in cmds.complement:
         complement()
         print("Complement sequence generated:")
         print_seq()
-    elif input_str in coms.reverse_complement:
+
+    elif input_str in cmds.reverse_complement:
         reverse()
         complement()
         print("Reverse complement sequence generated:")
         print_seq()
-    elif input_str in coms.transcribe:
+
+    elif input_str in cmds.transcribe:
         transcribe()
-        print("Sequence transcribed:")
+        print(f"Sequence transcribed into {seq_type}:")
         print_seq()
-    elif input_str in coms.translate:
+
+    elif input_str in cmds.rna:
+        if seq_type == "DNA":
+            transcribe()
+            print("Sequence transcribed into RNA:")
+            print_seq()
+        elif seq_type == "RNA":
+            print_seq()
+        else: transcribe()  # protein, prints error message
+
+    elif input_str in cmds.dna:
+        if seq_type == "RNA":
+            transcribe()
+            print("Sequence transcribed into DNA:")
+            print_seq()
+        elif seq_type == "DNA":
+            print_seq()
+        else: transcribe()  # protein, prints error message
+
+    elif input_str in cmds.translate:
         translate()
         print("Sequence translated:")
         print_seq()
 
     # --- Other ---
-    elif input_str in coms.undo:
+    elif input_str in cmds.undo:
         if undo():
-            print("Undone. Sequence:")
+            print(f"Undone. {seq_type} sequence:")
             print_seq()
         else:
             print("Nothing to undo.")
             print()
-    elif input_str in coms.redo:
+
+    elif input_str in cmds.redo:
         if redo():
-            print("Redone. Sequence:")
+            print(f"Redone. {seq_type} sequence:")
             print_seq()
         else:
             print("Nothing to redo.")
             print()
-    elif input_str in coms.help: help()
+
+    elif input_str in cmds.help: help()
