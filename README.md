@@ -12,6 +12,8 @@ License: MIT
         - prints sequence
     - length: `length`, `len`
         - gives length of DNA, RNA or protein seqence in nt or aa
+    - count: `count`
+        - counts each nucleotide or amino acid and their portions
 
 - **Sequence Editing**
     - reverse: `reverse`, `rev`
