@@ -6,7 +6,7 @@ Basic tools for genetic sequences
     - new sequence: `new`
         - enter a new sequence
         - enter sequence optionaly with `5'-` or `3'-` at the beginning and end to indicate orientation
-        - enter `raandom`, `rand` or `random [dna / rna /protein] [length]` for a random sequence
+        - enter `random`, `rand` or `random [dna / rna /protein] [length]` for a random sequence
     - sequence: `sequence`, `seq`, `print seq`, `print sequence`
         - prints sequence
     - length: `length`, `len`
