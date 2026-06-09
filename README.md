@@ -34,6 +34,6 @@ Basic tools for genetic sequences
         - refers to this file
 
 ---
-License: MIT, free to do whatever you want
+License: MIT, do whatever you want
 
     
